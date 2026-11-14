@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from shapeshift.data.schema import PITCH_FAMILY, coerce_source_types
+from shapeshift.data.schema import PITCH_FAMILY, STUDY_GROUP, coerce_source_types
 
 FEET_TO_INCHES = 12.0
 
@@ -21,6 +21,7 @@ def add_canonical_pitch_features(frame: pd.DataFrame) -> pd.DataFrame:
     hand_multiplier = np.where(result["p_throws"].eq("L"), -1.0, 1.0)
 
     result["pitch_family"] = result["pitch_type"].map(PITCH_FAMILY).fillna("other")
+    result["study_group"] = result["pitch_family"].map(STUDY_GROUP).fillna("other")
     if "api_break_x_arm" in result.columns:
         api_break = pd.to_numeric(result["api_break_x_arm"], errors="coerce")
         fallback = -result["pfx_x"] * hand_multiplier
@@ -48,6 +49,7 @@ def add_canonical_pitch_features(frame: pd.DataFrame) -> pd.DataFrame:
     else:
         result["is_regular_season"] = True
 
+    result["season"] = result["game_date"].dt.year.astype("Int16")
     result["pitch_uid"] = (
         result["game_pk"].astype("Int64").astype("string")
         + "-"
@@ -61,17 +63,18 @@ def add_canonical_pitch_features(frame: pd.DataFrame) -> pd.DataFrame:
 def flag_quality_issues(frame: pd.DataFrame) -> pd.DataFrame:
     """Attach row-level, non-destructive quality flags."""
     result = frame.copy()
-    result["qa_missing_identity"] = result[
-        ["game_date", "game_pk", "pitcher", "pitch_type"]
-    ].isna().any(axis=1)
-    result["qa_missing_shape"] = result[
-        ["release_speed", "pfx_x", "pfx_z", "release_pos_x", "release_pos_z"]
-    ].isna().any(axis=1)
-    result["qa_implausible_velocity"] = ~result["release_speed"].between(45, 110)
-    result["qa_implausible_movement"] = (
-        result["arm_side_break"].abs().gt(35)
-        | result["induced_vertical_break"].abs().gt(35)
+    result["qa_missing_identity"] = (
+        result[["game_date", "game_pk", "pitcher", "pitch_type"]].isna().any(axis=1)
     )
+    result["qa_missing_shape"] = (
+        result[["release_speed", "pfx_x", "pfx_z", "release_pos_x", "release_pos_z"]]
+        .isna()
+        .any(axis=1)
+    )
+    result["qa_implausible_velocity"] = ~result["release_speed"].between(45, 110)
+    result["qa_implausible_movement"] = result["arm_side_break"].abs().gt(35) | result[
+        "induced_vertical_break"
+    ].abs().gt(35)
     result["qa_non_regular_season"] = ~result["is_regular_season"].fillna(False)
     result["qa_exclude_primary"] = result[
         [

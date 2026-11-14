@@ -43,6 +43,18 @@ OPTIONAL_COLUMNS = frozenset(
         "effective_speed",
         "launch_speed",
         "launch_angle",
+        "estimated_woba_using_speedangle",
+        "woba_value",
+        "woba_denom",
+        "age_pit",
+        "spin_axis",
+        "balls",
+        "strikes",
+        "inning",
+        "n_thruorder_pitcher",
+        "home_team",
+        "away_team",
+        "inning_topbot",
     }
 )
 
@@ -70,6 +82,15 @@ NUMERIC_COLUMNS = frozenset(
         "effective_speed",
         "launch_speed",
         "launch_angle",
+        "estimated_woba_using_speedangle",
+        "woba_value",
+        "woba_denom",
+        "age_pit",
+        "spin_axis",
+        "balls",
+        "strikes",
+        "inning",
+        "n_thruorder_pitcher",
     }
 )
 
@@ -91,6 +112,27 @@ PITCH_FAMILY = {
     "SC": "screwball",
     "KN": "knuckleball",
 }
+
+
+# Study groups are coarser than Savant pitch types on purpose. Savant began labelling
+# sweepers (ST) and slurves (SV) in 2023, so a 2022 "SL" and a 2023 "ST" can be the same
+# physical pitch. Pooling them keeps a relabel from looking like a redesign.
+STUDY_GROUP = {
+    "four_seam": "four_seam",
+    "sinker": "sinker",
+    "cutter": "cutter",
+    "slider": "slider_sweeper",
+    "sweeper": "slider_sweeper",
+    "slurve": "slider_sweeper",
+    "curveball": "curveball",
+    "changeup": "changeup",
+    "splitter": "splitter",
+}
+
+
+def source_columns() -> list[str]:
+    """Columns read from raw partitions; everything else Savant sends is dropped early."""
+    return sorted(REQUIRED_COLUMNS | OPTIONAL_COLUMNS)
 
 
 class SchemaError(ValueError):

@@ -25,3 +25,5 @@ artifacts/figures/
 # Keep directory structure
 !data/**/.gitkeep
 !artifacts/**/.gitkeep
+logs/
+data/*.duckdb
