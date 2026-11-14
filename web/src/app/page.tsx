@@ -295,7 +295,8 @@ export default function Home() {
               <p className="kicker">What it can’t tell you</p>
               <p>
                 This is observational. It controls for what Statcast measures, not health, intent, grip, or a whole
-                training program changing at once. Pitchers who abandoned a change in spring, or lost their job, never
+                training program changing at once. Pitchers who choose to redesign may also differ in ways it can’t see, like
+                access to a pitch lab or a healthy winter. Pitchers who abandoned a change in spring, or lost their job, never
                 make the sample. And “works on average” doesn’t mean it works for every arm.
               </p>
             </div>

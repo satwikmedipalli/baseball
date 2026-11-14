@@ -191,10 +191,12 @@ export default function BallparkHero3D({ redesigns, seasons }: { redesigns: numb
             </div>
           </div>
           <div data-hud="pitch" className="bp3-pitch" style={{ opacity: 0 }}>
-            <strong>97.8</strong> mph <span>4-seam fastball</span>
+            <strong>97.8</strong> mph <span>4-seam fastball · illustration</span>
           </div>
           <div data-hud="exit" className="bp3-exit" style={{ opacity: 0 }}>
-            <p className="bp3-exit-h">Home run</p>
+            <p className="bp3-exit-h">
+              Home run <span className="bp3-illus">Illustration, not study data</span>
+            </p>
             <dl>
               <div>
                 <dt>Exit velo</dt>
