@@ -13,11 +13,10 @@ from rich.table import Table
 from shapeshift.config import load_settings
 from shapeshift.data.ingest import fetch_range
 from shapeshift.data.store import build_pitch_table, quality_summary
-from shapeshift.models.train import train_and_validate
 
 app = typer.Typer(
     name="shapeshift",
-    help="Analyze durable MLB pitch-shape interventions.",
+    help="Which MLB pitch redesigns work, measured on public Statcast data.",
     no_args_is_help=True,
 )
 console = Console()
@@ -68,33 +67,51 @@ def audit(config: ConfigOption = Path("config/default.yaml")) -> None:
     table = Table(title="ShapeShift data-quality scorecard")
     for column in summary.columns:
         table.add_column(column)
-    table.add_row(*(str(value) for value in summary.iloc[0]))
+    for row in summary.to_dict(orient="records"):
+        table.add_row(
+            *(
+                str(int(value))
+                if column == "season"
+                else f"{value:.3f}"
+                if column.endswith("_missing")
+                else f"{int(value):,}"
+                for column, value in row.items()
+            )
+        )
     console.print(table)
 
 
-@app.command("train-shape-model")
-def train_shape_model(config: ConfigOption = Path("config/default.yaml")) -> None:
-    """Train on development data and score the frozen validation period."""
-    settings = load_settings(config)
-    metadata = train_and_validate(settings)
-    scorecard = metadata["scorecard"]
-    console.print_json(data=scorecard)
-
-
-@app.command("locked-eval")
-def locked_eval(config: ConfigOption = Path("config/default.yaml")) -> None:
-    """Run the frozen 2025 locked evaluation and write research artifacts."""
-    from shapeshift.evaluation.locked import run_locked_evaluation
+@app.command()
+def study(config: ConfigOption = Path("config/default.yaml")) -> None:
+    """Run the offseason redesign study and write artifacts/reports/study.json."""
+    from shapeshift.study.run import PRIMARY, run_study
 
     settings = load_settings(config)
-    report = run_locked_evaluation(settings)
-    console.print_json(data={
-        "evaluation_events": report["detection"]["evaluation_events"],
-        "ate_per_100": report["effect"]["ate_per_100"],
-        "ate_ci": [report["effect"]["ate_ci_low"], report["effect"]["ate_ci_high"]],
-        "case": report["case"],
-        "threshold": report["threshold"]["value"],
-    })
+    report = run_study(settings)
+    table = Table(title="Effect of a redesign on luck-adjusted runs saved per 100 pitches")
+    for column in ("era", "redesigns", "estimate", "95% interval", "pre-trend"):
+        table.add_column(column)
+    for era, result in report["results"].items():
+        effect = result["effects"][PRIMARY]
+        pre = result["pretrend"].get("pretrend_xrv100", {})
+        table.add_row(
+            era,
+            str(effect["n_treated"]),
+            f"{effect['estimate']:+.2f}",
+            f"{effect['ci_low']:+.2f} to {effect['ci_high']:+.2f}",
+            f"{pre.get('estimate', float('nan')):+.2f}",
+        )
+    console.print(table)
+
+
+@app.command()
+def report(config: ConfigOption = Path("config/default.yaml")) -> None:
+    """Turn study.json into figures, docs/results.md, and the website's data file."""
+    from shapeshift.study.report import write_report
+
+    settings = load_settings(config)
+    for path in write_report(settings):
+        console.print(f"[green]Wrote[/green] {path}")
 
 
 if __name__ == "__main__":

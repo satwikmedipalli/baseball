@@ -31,39 +31,34 @@ class DataConfig(StrictModel):
     source: str
     chunk_days: int = Field(ge=1, le=31)
     start_date: date
-    historical_archive_start: date | None = None
-    development_end: date
-    validation_start: date
-    validation_end: date
-    evaluation_start: date
-    evaluation_end: date
-    prospective_start: date
-    regular_season_only: bool = True
 
 
-class InterventionConfig(StrictModel):
-    pre_days: int = Field(gt=0)
-    transition_days: int = Field(ge=0)
-    post_days: int = Field(gt=0)
-    min_pitches_each_side: int = Field(gt=0)
-    min_games_each_side: int = Field(gt=0)
+class StudyConfig(StrictModel):
+    min_pitches_per_season: int = Field(gt=0)
+    material_change: dict[str, float]
+    min_noise_z: float = Field(gt=0)
+    control_band: float = Field(gt=0, lt=1)
     persistence_share: float = Field(gt=0, le=1)
-    rolling_window_pitches: int = Field(gt=10)
+    mixed_type_share: float = Field(gt=0, lt=1)
+    development_pairs: list[tuple[int, int]]
+    confirmation_pairs: list[tuple[int, int]]
+    n_controls: int = Field(gt=0)
+    caliper: float = Field(gt=0)
+    n_bootstrap: int = Field(ge=100)
+    n_placebo: int = Field(ge=10)
+    min_subgroup: int = Field(gt=1)
+    shape_model_sample: int = Field(gt=1000)
 
-
-class ModelConfig(StrictModel):
-    outcome_sign: str
-    min_pitcher_pitch_count: int = Field(gt=0)
-    calibration_bins: int = Field(gt=1)
-    include_arm_angle: bool = True
+    @property
+    def all_pairs(self) -> list[tuple[int, int]]:
+        return [*self.development_pairs, *self.confirmation_pairs]
 
 
 class Settings(StrictModel):
     project: ProjectConfig
     paths: PathConfig
     data: DataConfig
-    interventions: InterventionConfig
-    model: ModelConfig
+    study: StudyConfig
 
 
 def load_settings(path: Path = Path("config/default.yaml")) -> Settings:

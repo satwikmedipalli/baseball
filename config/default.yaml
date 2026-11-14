@@ -12,29 +12,41 @@ paths:
 data:
   source: baseball_savant
   chunk_days: 7
-  # Hawkeye-era modeling core. Pre-2021 retained only for optional sensitivity.
+  # Hawkeye era. 2020 is downloaded only as the "season before" for the 2021 pre-trend.
   start_date: "2021-03-20"
-  historical_archive_start: "2018-03-20"
-  development_end: "2023-11-30"
-  validation_start: "2024-03-20"
-  validation_end: "2024-11-30"
-  evaluation_start: "2025-03-20"
-  evaluation_end: "2025-11-30"
-  # 2026 ABS changes plate/zone definitions; exclude location from Stuff models.
-  prospective_start: "2026-03-20"
-  regular_season_only: true
 
-interventions:
-  pre_days: 60
-  transition_days: 7
-  post_days: 60
-  min_pitches_each_side: 100
-  min_games_each_side: 3
-  persistence_share: 0.70
-  rolling_window_pitches: 50
-
-model:
-  outcome_sign: pitcher_positive
-  min_pitcher_pitch_count: 100
-  calibration_bins: 15
-  include_arm_angle: true
+# Offseason redesign study (primary analysis). See docs/research_protocol.md.
+# v1 (2026-11-14, before any outcome was computed) used thresholds that flagged 60% of
+# pitch-seasons as redesigns and left 4% as controls. Amendment v2 (same day) re-set
+# each threshold near the 95th percentile of ordinary year-to-year change, using shape
+# data only. v1 is still reported as a sensitivity specification.
+study:
+  min_pitches_per_season: 150
+  # A change is "material" when it clears the size a pitching coach would call a real
+  # change, in the feature's own units. Movement in inches, release in feet.
+  material_change:
+    release_speed: 2.0
+    induced_vertical_break: 3.0
+    arm_side_break: 3.0
+    release_spin_rate: 150.0
+    arm_angle: 6.0
+    release_pos_z: 0.25
+    release_side: 0.6
+    release_extension: 0.25
+  min_noise_z: 4.0
+  # Controls: every feature moved less than this share of its material threshold.
+  control_band: 0.6
+  # Both halves of the new season must keep this share of the change, same direction.
+  persistence_share: 0.5
+  # Drop a pitcher-group if a second Savant pitch type inside the group exceeds this
+  # share in either season (a slider/sweeper mix would fake a shape change).
+  mixed_type_share: 0.15
+  development_pairs: [[2021, 2022], [2022, 2023], [2023, 2024]]
+  confirmation_pairs: [[2024, 2025], [2025, 2026]]
+  n_controls: 5
+  # In SD of the propensity-score logit (Austin 2011).
+  caliper: 0.2
+  n_bootstrap: 2000
+  n_placebo: 200
+  min_subgroup: 25
+  shape_model_sample: 1000000
