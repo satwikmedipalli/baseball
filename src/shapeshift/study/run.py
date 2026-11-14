@@ -349,6 +349,11 @@ def run_study(settings: Settings) -> dict[str, Any]:
     pitches, scorecards = graded_pitches(settings)
     reliability = grade_reliability(pitches)
     seasons = season_table(pitches)
+    data_summary = {
+        "pitches": len(pitches),
+        "first_season": int(pitches["season"].min()),
+        "last_season": int(pitches["season"].max()),
+    }
     del pitches
     seasons.to_parquet(settings.paths.interim / "season_table.parquet", index=False)
     table = classify(seasons, settings)
@@ -376,6 +381,7 @@ def run_study(settings: Settings) -> dict[str, Any]:
     report: dict[str, Any] = {
         "created_at_utc": datetime.now(UTC).isoformat(),
         "data_fingerprint": _fingerprint(settings),
+        "data": data_summary,
         "config": settings.study.model_dump(),
         "units": {
             "outcome_scale": "change from season t to t+1, pitcher-side positive",
@@ -419,6 +425,9 @@ def run_study(settings: Settings) -> dict[str, Any]:
         "starter_pre",
         "age_pre",
         "usage_pre",
+        "usage_post",
+        "whiff_rate_pre",
+        "whiff_rate_post",
         *[f"delta_{f}" for f in SHAPE_FEATURES],
         *[f"{f}_mean_pre" for f in SHAPE_FEATURES],
         *[f"{f}_mean_post" for f in SHAPE_FEATURES],

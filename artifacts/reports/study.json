@@ -1,6 +1,11 @@
 {
-  "created_at_utc": "2026-11-14T17:56:27.199883+00:00",
+  "created_at_utc": "2026-11-14T18:39:47.045867+00:00",
   "data_fingerprint": "ffe7fa09d87f1044",
+  "data": {
+    "pitches": 4530013,
+    "first_season": 2020,
+    "last_season": 2026
+  },
   "config": {
     "min_pitches_per_season": 150,
     "material_change": {

@@ -23,6 +23,7 @@ FIGURES = Path("docs/figures")
 RESULTS_MD = Path("docs/results.md")
 README = Path("README.md")
 WEB_DATA = Path("web/public/study.json")
+WEB_REDESIGNS = Path("web/public/redesigns.json")
 
 # Reference palette, light mode (validated adjacent pair blue/orange).
 SURFACE = "#fcfcfb"
@@ -605,6 +606,149 @@ def readme_block(head: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def redesign_records(reports: Path) -> dict[str, Any] | None:
+    """Every matched redesign, plus a background cloud of pitch shapes, for the website.
+
+    ``gap`` is one redesign's change in luck-adjusted runs per 100 minus the average
+    change of its matched look-alikes: a noisy single-case estimate, shown as such.
+    """
+    units_path, matches_path = reports / "study_units.parquet", reports / "study_matches.parquet"
+    if not units_path.exists() or not matches_path.exists():
+        return None
+    import pandas as pd
+
+    units = pd.read_parquet(units_path)
+    matches = pd.read_parquet(matches_path)
+    control_change = (
+        matches.assign(change=units["d_xrv100"].reindex(matches["control"]).to_numpy())
+        .groupby("treated")["change"]
+        .mean()
+    )
+    treated = units.loc[control_change.index]
+
+    def name(raw: object) -> str:
+        return " ".join(reversed(str(raw).split(", ")))
+
+    records = []
+    for index, row in treated.iterrows():
+        records.append(
+            {
+                "id": int(index),
+                "name": name(row["player_name_pre"]),
+                "pitcher": int(row["pitcher"]),
+                "pitch": str(row["study_group"]),
+                "pair": str(row["pair"]),
+                "era": str(row["era"]),
+                "change": str(row["change_label"]),
+                "rebound": bool(row["rebound"]),
+                "velo": [
+                    round(float(row["release_speed_mean_pre"]), 1),
+                    round(float(row["release_speed_mean_post"]), 1),
+                ],
+                "ivb": [
+                    round(float(row["induced_vertical_break_mean_pre"]), 1),
+                    round(float(row["induced_vertical_break_mean_post"]), 1),
+                ],
+                "hb": [
+                    round(float(row["arm_side_break_mean_pre"]), 1),
+                    round(float(row["arm_side_break_mean_post"]), 1),
+                ],
+                "spin": [
+                    round(float(row["release_spin_rate_mean_pre"])),
+                    round(float(row["release_spin_rate_mean_post"])),
+                ],
+                "whiff": [
+                    round(float(row["whiff_rate_pre"]), 3),
+                    round(float(row["whiff_rate_post"]), 3),
+                ],
+                "n": int(row["n_post"]),
+                "own": round(float(row["d_xrv100"]), 3),
+                "matched": round(float(control_change.loc[index]), 3),
+                "gap": round(float(row["d_xrv100"] - control_change.loc[index]), 3),
+            }
+        )
+    cloud: dict[str, list[list[float]]] = {}
+    for group, frame in units.groupby("study_group"):
+        cloud[str(group)] = (
+            frame[["arm_side_break_mean_pre", "induced_vertical_break_mean_pre"]]
+            .dropna()
+            .round(1)
+            .to_numpy()
+            .tolist()
+        )
+    return {"redesigns": records, "cloud": cloud}
+
+
+def featured_example(reports: Path) -> dict[str, Any] | None:
+    """The largest fastball velocity gain in the sample, with its matched comparisons.
+
+    Picked by rule, not by hand: the four-seam "more velocity" redesign (excluding
+    rebounds) with the biggest gain that has at least one matched control.
+    """
+    units_path, matches_path = reports / "study_units.parquet", reports / "study_matches.parquet"
+    if not units_path.exists() or not matches_path.exists():
+        return None
+    import pandas as pd
+
+    units = pd.read_parquet(units_path)
+    matches = pd.read_parquet(matches_path)
+    candidates = units.loc[
+        units["status"].eq("redesign")
+        & units["change_label"].eq("more velocity")
+        & units["study_group"].eq("four_seam")
+        & ~units["rebound"].astype(bool)
+        & units.index.isin(matches["treated"])
+    ]
+    if candidates.empty:
+        return None
+    index = candidates["delta_release_speed"].idxmax()
+    row = units.loc[index]
+    controls = units.loc[matches.loc[matches["treated"].eq(index), "control"]]
+    last, first = [*str(row["player_name_pre"]).split(", "), ""][:2]
+    season_pre, season_post = (int(x) for x in str(row["pair"]).split("-"))
+
+    def side(r: Any, when: str) -> dict[str, float]:
+        return {
+            "velocity": float(r[f"release_speed_mean_{when}"]),
+            "ride": float(r[f"induced_vertical_break_mean_{when}"]),
+            "run": float(r[f"arm_side_break_mean_{when}"]),
+            "whiff_rate": float(r[f"whiff_rate_{when}"]),
+            "xrv100": float(r[f"xrv100_{when}"]),
+            "pitches": int(r[f"n_{when}"]),
+        }
+
+    return {
+        "id": int(index),
+        "name": f"{first} {last}".strip(),
+        "pitch": "four-seam fastball",
+        "season_pre": season_pre,
+        "season_post": season_post,
+        "before": side(row, "pre"),
+        "after": side(row, "post"),
+        "d_xrv100": float(row["d_xrv100"]),
+        "matches": [
+            {
+                "name": " ".join(reversed(str(c["player_name_pre"]).split(", "))),
+                "d_velocity": float(c["delta_release_speed"]),
+                "d_xrv100": float(c["d_xrv100"]),
+                "d_whiff_rate": float(c["d_whiff_rate"]),
+            }
+            for _, c in controls.iterrows()
+        ],
+    }
+
+
+def pitches_per_season(reports: Path) -> int | None:
+    """Median pitches a redesigned pitch was thrown in its redesign season."""
+    path = reports / "study_units.parquet"
+    if not path.exists():
+        return None
+    import pandas as pd
+
+    units = pd.read_parquet(path, columns=["status", "n_post"])
+    return int(units.loc[units["status"].eq("redesign"), "n_post"].median())
+
+
 def write_report(settings: Settings) -> list[Path]:
     report = json.loads((settings.paths.artifacts / "reports" / "study.json").read_text())
     _style()
@@ -651,7 +795,15 @@ def write_report(settings: Settings) -> list[Path]:
             "actual": report["placebo"]["actual"],
         },
         "reliability": report["shape_model"]["reliability"],
+        "config": report["config"],
+        "data": report.get("data"),
+        "example": featured_example(settings.paths.artifacts / "reports"),
+        "pitches_per_season": pitches_per_season(settings.paths.artifacts / "reports"),
     }
     WEB_DATA.write_text(json.dumps(site, indent=1) + "\n")
     written.append(WEB_DATA)
+    records = redesign_records(settings.paths.artifacts / "reports")
+    if records is not None:
+        WEB_REDESIGNS.write_text(json.dumps(records, separators=(",", ":")) + "\n")
+        written.append(WEB_REDESIGNS)
     return written
