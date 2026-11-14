@@ -23,6 +23,9 @@ NUMERIC_FEATURES = (
     "release_extension",
     "release_spin_rate",
     "arm_angle",
+    "fb_velo_diff",
+    "fb_ivb_diff",
+    "fb_hb_diff",
 )
 CATEGORICAL_FEATURES = ("pitch_family", "p_throws", "stand")
 MODEL_FEATURES = (*NUMERIC_FEATURES, *CATEGORICAL_FEATURES)
@@ -39,8 +42,54 @@ FORBIDDEN_FEATURES = frozenset(
         "events",
         "delta_run_exp",
         "pitcher_run_value",
+        "pitcher_rv",
+        "pitcher_xrv",
+        "launch_speed",
+        "launch_angle",
+        "estimated_woba_using_speedangle",
     }
 )
+
+
+FASTBALL_FAMILIES = ("four_seam", "sinker")
+
+
+def add_arsenal_context(pitches: pd.DataFrame) -> pd.DataFrame:
+    """Speed and movement gaps to the pitcher's primary fastball that season.
+
+    A changeup at 86 mph means something different off 98 than off 91. The primary
+    fastball is the four-seam or sinker the pitcher threw most that season.
+    """
+    result = pitches.copy()
+    fastballs = result.loc[result["pitch_family"].isin(FASTBALL_FAMILIES)]
+    counts = fastballs.groupby(["pitcher", "season", "pitch_family"], observed=True).size()
+    if counts.empty:
+        for column in ("fb_velo_diff", "fb_ivb_diff", "fb_hb_diff"):
+            result[column] = np.nan
+        return result
+    primary = counts.groupby(level=["pitcher", "season"]).idxmax().map(lambda key: key[2])
+    primary = primary.rename("primary_fastball").reset_index()
+    means = (
+        fastballs.groupby(["pitcher", "season", "pitch_family"], observed=True)[
+            ["release_speed", "induced_vertical_break", "arm_side_break"]
+        ]
+        .mean()
+        .reset_index()
+        .rename(columns={"pitch_family": "primary_fastball"})
+    )
+    reference = primary.merge(means, on=["pitcher", "season", "primary_fastball"])
+    reference = reference.rename(
+        columns={
+            "release_speed": "fb_velo",
+            "induced_vertical_break": "fb_ivb",
+            "arm_side_break": "fb_hb",
+        }
+    ).drop(columns="primary_fastball")
+    result = result.merge(reference, on=["pitcher", "season"], how="left")
+    result["fb_velo_diff"] = result["release_speed"] - result["fb_velo"]
+    result["fb_ivb_diff"] = result["induced_vertical_break"] - result["fb_ivb"]
+    result["fb_hb_diff"] = result["arm_side_break"] - result["fb_hb"]
+    return result.drop(columns=["fb_velo", "fb_ivb", "fb_hb"])
 
 
 @dataclass(frozen=True)
@@ -103,7 +152,7 @@ def build_shape_value_pipeline(random_seed: int = 42) -> Pipeline:
 def fit_shape_value_model(
     training: pd.DataFrame,
     *,
-    target: str = "pitcher_run_value",
+    target: str = "pitcher_xrv",
     random_seed: int = 42,
 ) -> Pipeline:
     """Fit using only the pre-committed physical feature list."""
@@ -120,7 +169,7 @@ def evaluate_shape_value_model(
     training: pd.DataFrame,
     evaluation: pd.DataFrame,
     *,
-    target: str = "pitcher_run_value",
+    target: str = "pitcher_xrv",
 ) -> Scorecard:
     """Compare model predictions with a frozen pitch-family-mean baseline."""
     eligible = evaluation[target].notna()

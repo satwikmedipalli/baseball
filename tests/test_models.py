@@ -26,10 +26,13 @@ def model_frame(rows: int = 500) -> pd.DataFrame:
             "release_extension": rng.normal(6.4, 0.3, rows),
             "release_spin_rate": rng.normal(2300, 150, rows),
             "arm_angle": rng.normal(40, 8, rows),
+            "fb_velo_diff": rng.normal(-6, 3, rows),
+            "fb_ivb_diff": rng.normal(-8, 4, rows),
+            "fb_hb_diff": rng.normal(-10, 5, rows),
             "pitch_family": np.where(speed > 92, "four_seam", "slider"),
             "p_throws": "R",
             "stand": np.where(rng.random(rows) > 0.5, "R", "L"),
-            "pitcher_run_value": run_value,
+            "pitcher_xrv": run_value,
         }
     )
 
