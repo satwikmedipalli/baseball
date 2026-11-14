@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ShapeShift | Pitch Intervention Research",
+  title: "ShapeShift | Which pitch redesigns work?",
   description:
-    "A decision-grade public-data study of durable MLB pitch-shape interventions.",
+    "An observational study of every MLB offseason pitch redesign, 2020-2026, using public Statcast data.",
 };
 
 export default function RootLayout({

@@ -58,7 +58,9 @@ def fake_report() -> dict[str, object]:
         "placebo": {"estimates": [0.01, -0.02, 0.0, 0.03], "actual": 0.2, "share_as_extreme": 0.0},
         "subgroups": [subgroup],
         "change_types": [{**subgroup, "study_group": "any"}],
-        "sensitivity": [{"specification": "pre-registered", **effect("d_xrv100")}],
+        "sensitivity": [
+            {"specification": "main specification (protocol v2)", **effect("d_xrv100")}
+        ],
         "velocity_check": {
             "gains": 40,
             "rebounds": 3,

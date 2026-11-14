@@ -43,7 +43,7 @@ Placebo: 200 draws of fake redesigns from unchanged pitches, run through the sam
 
 | Specification | Estimate (95% interval) | Redesigns |
 |---|---|---:|
-| pre-registered | +0.23 (+0.13 to +0.33) | 923 |
+| main specification (protocol v2) | +0.23 (+0.13 to +0.33) | 923 |
 | 1 control per redesign | +0.24 (+0.13 to +0.35) | 923 |
 | 10 controls per redesign | +0.22 (+0.12 to +0.32) | 923 |
 | tighter caliper (0.05 SD) | +0.23 (+0.11 to +0.34) | 642 |

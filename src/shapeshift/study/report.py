@@ -643,6 +643,7 @@ def write_report(settings: Settings) -> list[Path]:
             for era, v in report["results"].items()
         },
         "subgroups": report["subgroups"],
+        "change_types": report["change_types"],
         "sensitivity": report["sensitivity"],
         "placebo": {
             "share_as_extreme": report["placebo"]["share_as_extreme"],

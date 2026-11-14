@@ -265,7 +265,7 @@ def sensitivity(seasons: pd.DataFrame, table: pd.DataFrame, settings: Settings) 
     def add(name: str, effects: list[Effect]) -> None:
         rows.append({"specification": name, **(_primary(effects) or {})})
 
-    add("pre-registered", _effects(table, settings, outcomes=(PRIMARY,))[0])
+    add("main specification (protocol v2)", _effects(table, settings, outcomes=(PRIMARY,))[0])
     add("1 control per redesign", _effects(table, settings, outcomes=(PRIMARY,), k=1)[0])
     add("10 controls per redesign", _effects(table, settings, outcomes=(PRIMARY,), k=10)[0])
     add(

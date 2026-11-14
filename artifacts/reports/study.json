@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-11-14T17:47:55.069570+00:00",
+  "created_at_utc": "2026-11-14T17:56:27.199883+00:00",
   "data_fingerprint": "ffe7fa09d87f1044",
   "config": {
     "min_pitches_per_season": 150,
@@ -5959,7 +5959,7 @@
   ],
   "sensitivity": [
     {
-      "specification": "pre-registered",
+      "specification": "main specification (protocol v2)",
       "outcome": "d_xrv100",
       "estimate": 0.23027899036951588,
       "ci_low": 0.1297114650501462,
