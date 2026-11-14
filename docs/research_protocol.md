@@ -1,204 +1,180 @@
 # ShapeShift research protocol
 
-Version: 0.2 (pre-analysis draft)
+Version 2, 2026-11-14. Every rule below is implemented in `src/shapeshift/study/` and
+every threshold lives in `config/default.yaml`. Where this document and the code
+disagree, the code is what ran, and the disagreement is a bug.
 
-Influences incorporated from public research and application-review standards:
-intervention identification over Stuff+ cloning; keep / reshape / abandon decisions;
-zone-strike and platoon-neutrality secondary outcomes; explicit coach stop rules.
+## 1. Question
 
-## 1. Baseball decision
+When an MLB pitcher changes the physical shape of a pitch over the winter, does that
+pitch get better results the next season than it would have otherwise? And which kinds
+of change pay off?
 
-A player-development group has limited offseason and in-season training bandwidth. The
-decision is not merely whether a pitch grades well. It is whether to ask a specific
-pitcher to keep, reshape, or de-emphasize a specific pitch under role and feasibility
-constraints.
+The decision this informs is a player-development one: which offseason change is
+worth a pitcher's limited training time. It is not a pitch-grading exercise. Shape
+grades appear only as a mechanism check (section 6).
 
-For each pitcher–pitch case, ShapeShift must choose exactly one of:
+## 2. Data
 
-1. **Keep** the current pitch as-is.
-2. **Reshape** it toward a defined, physically supported target.
-3. **De-emphasize / abandon** it in favor of an existing secondary.
+- Every regular-season pitch from Baseball Savant, 2020 to 2026, pulled with
+  `pybaseball` in weekly, checksummed partitions (`shapeshift fetch`).
+- Spring training, postseason, pitches with missing tracking, and physically
+  implausible readings are flagged and excluded (`shapeshift audit` prints the counts).
+- The study uses season pairs 2021-22 through 2025-26. The 2020 season is used only as
+  the "season before" for the 2021 pre-trend check.
 
-Acquisition relevance is secondary: a reshape recommendation can also flag a player as a
-tractable development target. "Do nothing" is expressed as Keep when expected benefit does
-not clear uncertainty, feasibility, or arsenal risk.
+## 3. Unit and pitch groups
 
-## 2. Confirmatory question
+The unit is one pitcher's pitch group in two consecutive seasons, with at least 150
+pitches in each.
 
-Among pitcher–pitch-type pairs with a persistent, material physical change, what is the
-average change in context-neutral expected runs allowed per 100 pitches during the next
-60 days, compared with observationally similar pitcher–pitch-type pairs that have not yet
-changed?
+Pitch groups are coarser than Savant's labels on purpose. Savant introduced the sweeper
+(ST) and slurve (SV) labels in 2023, so a 2022 "slider" and a 2023 "sweeper" can be the
+same pitch. Sliders, sweepers, and slurves are one group, and a unit is dropped if a
+second Savant pitch type makes up more than 15% of its group in either season (a
+slider-sweeper mix would fake a shape change).
 
-### 2.1 Unit of analysis
+Movement is mirrored so positive horizontal break always means arm-side, for both
+left- and right-handers.
 
-An intervention is indexed by pitcher, canonical pitch family, and detected change date.
-The pre-period is days -60 through -8. The transition buffer is days -7 through +7. The
-post-period is days +8 through +67. Alternate 30- and 90-day windows are sensitivity
-analyses.
+## 4. What counts as a redesign
 
-### 2.2 Treatment definition
+Classification reads physical shape only. No outcome column is passed to it, and a test
+(`tests/test_treatment.py::test_classification_ignores_outcomes`) enforces that.
 
-Treatment is detected without outcome information. A candidate must:
+For each of eight features (velocity, induced vertical break, arm-side break, spin,
+arm angle, release height, release side, extension):
 
-- have at least 100 pitches in both pre- and post-periods;
-- appear in at least three games on each side;
-- exceed a robust, pitch-family-specific threshold in at least one physical dimension;
-- retain the new state in at least 70% of post-period rolling windows; and
-- not be explained solely by a tracking-system discontinuity or pitch relabeling.
+1. Take the change in the pitch's season mean.
+2. Subtract the median change for that pitch group in that season pair. This removes
+   league-wide drift: aging, a new ball, tracking recalibration.
+3. Compare it to a material threshold in the feature's own units.
 
-Physical dimensions include velocity, arm-side horizontal movement, induced vertical
-movement, release height/side, extension, spin rate, and arsenal-relative differentials.
-Horizontal quantities are mirrored so positive values always represent arm-side movement.
+A unit is a **redesign** when at least one feature:
 
-Thresholds are learned from robust within-pitcher variability in the training era and
-frozen before evaluation.
+- moved at least its threshold (2.0 mph velocity; 3.0 in of vertical or horizontal
+  break; 150 rpm spin; 6 degrees of arm angle; 0.25 ft release height; 0.6 ft release
+  side; 0.25 ft extension);
+- moved at least 4 standard errors, given that pitch's own pitch-to-pitch spread; and
+- held in both halves of the new season, keeping at least half the change and the
+  same direction.
 
-### 2.3 Primary outcome
+A unit is a **control** when every feature moved less than 60% of its threshold.
+Everything in between is **ambiguous** and excluded, so the comparison is between
+clear changes and clear non-changes.
 
-The primary outcome is the mean predicted run value per 100 pitches from a cross-fitted,
-context-neutral shape model. The model uses physical flight and release characteristics,
-pitch family, batter handedness, and fastball-relative differentials. It excludes plate
-location, count, score, observed pitch result, pitcher identity, and post-pitch variables.
+Each redesign is labelled by its main feature (the one furthest past its threshold)
+and direction, for example "more velocity".
 
-Observed `delta_run_exp` is retained for model training and secondary descriptive checks,
-with sign standardized so larger values are better for the pitcher.
+### Amendment from version 1
 
-### 2.4 Secondary outcomes
+Version 1 set thresholds by judgement (1.0 mph, 2 in, 0.25 ft release side, and so on)
+and a control band of 50%. Applied to the data, it classified 59% of pitch-seasons as
+redesigns and 4% as controls. That is year-to-year noise, not redesign, and it left too
+few controls to match against. Version 2 resets each threshold near the 95th percentile
+of ordinary drift-adjusted change. It was calibrated on the distribution of shape
+changes alone. One honest caveat: the version 1 effect estimate had already been
+computed when the amendment was made. To keep that visible, the version 1 rule is
+re-run and reported in every sensitivity table.
 
-- called-strike-plus-whiff (CSW) probability;
-- in-zone rate and in-zone miss rate for the treated pitch;
-- platoon split change (same-side vs opposite-side expected run value);
-- hard-contact probability conditional on contact;
-- usage change and cannibalization of other pitches' expected run value;
-- same-pitch physical persistence at 30, 60, and 90 days;
-- subsequent-period strikeout-minus-walk rate at pitcher level.
+## 5. Outcomes
 
-Secondary outcomes do not replace a null primary result.
-Zone-strike and platoon metrics are reported because optimizing whiff alone can conflict
-with strike-throwing and platoon-neutrality goals.
+All outcomes are post-season minus pre-season, signed so positive is better for the
+pitcher.
 
-## 3. Identification strategy
+**Primary: luck-adjusted runs saved per 100 pitches of the redesigned pitch.** This is
+Savant's run-expectancy change for each pitch, with batted-ball luck removed. For a ball
+in play, the actual wOBA value is replaced by the expected wOBA from exit velocity and
+launch angle (converted at 1.24 runs per wOBA point). So a bloop single and a lineout
+with the same contact quality count the same. Balls, strikes, walks, and strikeouts
+keep their actual value.
 
-This is an observational study. The headline estimate uses a staggered matched event study
-with not-yet-treated controls.
+**Secondary:** whiff rate per swing; called-strike-plus-whiff rate; chase rate per
+out-of-zone pitch; zone rate; xwOBA on contact; hard-hit rate per ball in play; actual
+(not luck-adjusted) runs saved; usage share; and runs saved per 100 pitches across the
+whole arsenal, to catch effects on the pitcher's other pitches.
 
-### 3.1 Matching variables
+## 6. Mechanism check: shape grades
 
-Controls are matched on pre-period:
+A gradient-boosted model predicts luck-adjusted run value from shape alone: velocity,
+movement, spin, release, arm angle, and gaps to the pitcher's primary fastball. Plate
+location, count, batter, and pitcher identity are excluded, and a test enforces the
+exclusion list. Each season is graded by a model trained on the other seasons, so no
+pitch is graded by a model that saw it. The grade change shows whether a redesign
+improved the pitch "on paper" as well as in results.
 
-- pitch family and pitcher handedness;
-- age band and role (starter/reliever);
-- velocity, movement, release, extension, and usage;
-- baseline shape-model value and trend;
-- opponent-handedness mix;
-- calendar month and season.
+## 7. Estimation
 
-Matching and weighting choices are fit in the training era. Covariate balance is reported
-before and after weighting.
+The estimand is the average effect of a redesign on the pitchers who made one.
 
-### 3.2 Required diagnostics
+1. **Propensity score.** Within each pitch group, a logistic regression predicts
+   redesign versus control from pre-season shape (all eight features), runs saved per
+   100, whiff rate, usage, age, and starter role.
+2. **Matching.** Each redesign is matched, with replacement, to its 5 nearest controls
+   by propensity logit within the same pitch group and season pair. The caliper is
+   0.2 standard deviations of the logit (Austin 2011). A pitcher is never matched to
+   himself.
+3. **Regression adjustment.** A least-squares fit of each outcome change on the same
+   covariates, fit on controls only, removes the imbalance matching leaves
+   (Abadie-Imbens bias correction).
+4. **Inference.** A pitcher-clustered bootstrap with 2,000 draws resamples pitchers
+   with replacement, on both the redesign and the control side, and gives a 95%
+   percentile interval. On simulated leagues with a known effect, the estimator is
+   unbiased and its interval covered the truth in 95% of 60 runs (`tests/test_estimate.py`).
 
-- event-time pre-trends;
-- placebo intervention dates;
-- negative-control outcomes;
-- overlap and effective sample size;
-- leave-one-season-out estimates;
-- sensitivity to treatment thresholds and windows;
-- estimates with and without players returning from long absences;
-- classification sensitivity (official tags vs continuous shape neighborhoods);
-- survivorship check for abandoned experiments;
-- command-stress tests (location consistency deterioration);
-- arsenal cannibalization under usage shifts.
+## 8. Eras
 
-The write-up will use "associated with" unless diagnostics and design justify stronger
-language. No public-data design can isolate coaching, injury, intent, grip, or mechanical
-changes that are unobserved.
+- **Development:** season pairs 2021-22, 2022-23, 2023-24.
+- **Held out:** 2024-25 and 2025-26.
 
-## 4. Prediction and recommendation
+Each era is estimated as its own matched design. Results for both are reported
+whatever they show.
 
-Candidate recommendations are distinct from intervention effect estimation.
+2026 caveat: the automated ball-strike challenge system changed called strikes
+league-wide. The drift adjustment and the control comparison absorb league-wide
+changes, but zone-based outcomes in 2025-26 should be read with that in mind.
 
-For each current pitcher–pitch pair, the system searches only within changes previously
-observed among biomechanically comparable public-data profiles. Proposed changes must:
+## 9. Checks
 
-- remain inside the empirical support of release and movement combinations;
-- respect pitch-family and handedness constraints;
-- avoid recommending multiple simultaneous dimensions unless observed together;
-- include prediction intervals and nearest historical analogs; and
-- be withheld when support or model agreement is insufficient.
+- **Balance:** standardized mean difference of every covariate before and after
+  matching. Target |SMD| at most 0.1.
+- **Pre-trend:** the same matched comparison on the season before the redesign
+  (t-1 to t). It should be near zero.
+- **Placebo:** 200 draws in which fake redesigns are sampled from controls, cell by
+  cell, and run through the full estimator. The real estimate should sit outside that
+  null distribution.
+- **Sensitivity:** 1 or 10 controls per redesign; a 0.05 SD caliper; no regression
+  adjustment; thresholds scaled by 0.75 and 1.5; the version 1 thresholds; also
+  matching on whole-arsenal results; only one-feature redesigns; excluding rebounds;
+  only units with a prior season; and dropping each season pair in turn.
+- **Rebounds:** a redesign whose main feature moved at least half a threshold the
+  other way the season before is a recovery, not a redesign (for example, regaining
+  lost velocity after an injury). It is reported with and without these.
 
-The candidate score combines expected run-value lift, probability of a durable change,
-usage-weighted opportunity, uncertainty, and an explicit implementation-risk penalty.
-The exact weighting will be displayed and sensitivity-tested.
+## 10. Change types and multiple testing
 
-Every recommendation must name the rejected alternatives. A Keep decision is preferred
-whenever reshape or abandon depends on extrapolation, weak overlap, or command collapse.
+Change types are slices of the one all-seasons matched design, so each type's
+all-seasons estimate is a blend of its two era estimates. Types with at least 25
+redesigns are reported. p-values are adjusted across types with Benjamini-Hochberg.
 
-## 5. Data splits
+A change type is called a finding only if both hold:
 
-- **Modeling core:** Hawkeye-era regular season, 2021–2025.
-- **Model development:** 2021–2023.
-- **Validation and threshold freezing:** 2024.
-- **Locked evaluation:** 2025.
-- **Prospective candidate board:** 2026 season-to-date, never used for performance claims.
-- **Pre-2021 archive:** optional sensitivity only; not used for headline estimates.
+- its adjusted q-value is below 0.05; and
+- its estimate is positive in both the development and the held-out era.
 
-The 2020 season is excluded from the core because of schedule/environment and incomplete
-arm-angle coverage relative to the Hawkeye design era. Automated tests enforce temporal
-boundaries.
+The rule is applied mechanically in `study/report.py`.
 
-**2026 ABS caution:** Savant plate/zone definitions change under ABS. Location metrics are
-never used in the Stuff / shape model and must not be pooled naively with 2021–2025 for
-any Location companion analysis.
+## 11. What this design cannot do
 
-## 6. Model scorecard
-
-The shape model must beat:
-
-1. pitch-family mean;
-2. regularized linear / logistic baseline; and
-3. a compact generalized additive or tree baseline where practical.
-
-Report:
-
-- multiclass log loss or component Brier scores;
-- expected calibration error and reliability plots;
-- run-value RMSE/MAE at pitch and pitcher–pitch aggregate levels;
-- year-to-year reliability after empirical-Bayes shrinkage;
-- subgroup performance by pitch family, handedness, and role.
-
-A complex model is rejected if gains are trivial or unstable.
-Shape grades are covariates and diagnostics, not the product.
-
-## 7. Failure criteria
-
-The project will not publish a positive recommendation leaderboard if:
-
-- treatment and control pre-trends materially diverge;
-- overlap is poor for the majority of interventions;
-- aggregate effects reverse under reasonable specifications;
-- candidate counterfactuals rely on extrapolation; or
-- tracking changes cannot be separated from player changes.
-
-A well-supported null result is acceptable and will be reported as such.
-
-## 8. Communication standard
-
-Every player recommendation must answer:
-
-1. Keep, reshape, or abandon — and what was rejected?
-2. Why might it help this player specifically?
-3. How large is the expected benefit and uncertainty?
-4. What could go wrong?
-5. What are the stop rules?
-6. What internal data or coach observation would confirm or reject it?
-
-The technical appendix must make every displayed number traceable to a data snapshot,
-configuration, and model artifact.
-
-Deliverables are three distinct artifacts:
-
-1. leadership memo;
-2. coach one-pager with drills and stop rules;
-3. analyst appendix with identification diagnostics.
+- **It is observational.** Matching handles what is measured: shape, results, usage,
+  age, role. It cannot see intent, health, coaching, grip, or a new training program
+  that changed several things at once. The whole-arsenal outcome and the pre-trend are
+  partial checks, not proof.
+- **"Redesign" means a measured change, not a chosen one.** Velocity loss and spin loss
+  appear as change types even though nobody plans them.
+- **Survivorship.** A pitcher must throw 150 or more pitches of the pitch in both
+  seasons. Experiments abandoned in spring, and pitchers who lost their jobs, are not
+  in the sample.
+- **Labels.** The main-feature label is a summary. A redesign often moves several
+  features together, so "more velocity" means velocity was the largest relative
+  change, not the only one.
