@@ -27,3 +27,7 @@ artifacts/figures/
 !artifacts/**/.gitkeep
 logs/
 data/*.duckdb
+
+# Vercel
+.vercel
+.env*.local
