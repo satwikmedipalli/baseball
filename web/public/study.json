@@ -1,5 +1,5 @@
 {
- "created_at_utc": "2026-11-14T17:56:27.199883+00:00",
+ "created_at_utc": "2026-11-14T18:39:47.045867+00:00",
  "data_fingerprint": "ffe7fa09d87f1044",
  "headline": {
   "pitch_seasons": 4419,
@@ -6183,5 +6183,102 @@
    "grade_predicts_next_results_r": 0.3102252005107995,
    "results_predict_next_results_r": 0.3524189713483865
   }
- ]
+ ],
+ "config": {
+  "min_pitches_per_season": 150,
+  "material_change": {
+   "release_speed": 2.0,
+   "induced_vertical_break": 3.0,
+   "arm_side_break": 3.0,
+   "release_spin_rate": 150.0,
+   "arm_angle": 6.0,
+   "release_pos_z": 0.25,
+   "release_side": 0.6,
+   "release_extension": 0.25
+  },
+  "min_noise_z": 4.0,
+  "control_band": 0.6,
+  "persistence_share": 0.5,
+  "mixed_type_share": 0.15,
+  "development_pairs": [
+   [
+    2021,
+    2022
+   ],
+   [
+    2022,
+    2023
+   ],
+   [
+    2023,
+    2024
+   ]
+  ],
+  "confirmation_pairs": [
+   [
+    2024,
+    2025
+   ],
+   [
+    2025,
+    2026
+   ]
+  ],
+  "n_controls": 5,
+  "caliper": 0.2,
+  "n_bootstrap": 2000,
+  "n_placebo": 200,
+  "min_subgroup": 25,
+  "shape_model_sample": 1000000
+ },
+ "data": {
+  "pitches": 4530013,
+  "first_season": 2020,
+  "last_season": 2026
+ },
+ "example": {
+  "id": 1648,
+  "name": "Cole Ragans",
+  "pitch": "four-seam fastball",
+  "season_pre": 2022,
+  "season_post": 2023,
+  "before": {
+   "velocity": 92.11832797427653,
+   "ride": 18.48540192926045,
+   "run": 10.704694533762057,
+   "whiff_rate": 0.10344827586206896,
+   "xrv100": -0.8511080639867575,
+   "pitches": 311
+  },
+  "after": {
+   "velocity": 96.54481132075472,
+   "ride": 16.06245283018868,
+   "run": 12.388679245283019,
+   "whiff_rate": 0.24675324675324675,
+   "xrv100": 0.5777133846074696,
+   "pitches": 636
+  },
+  "d_xrv100": 1.4288214485942272,
+  "matches": [
+   {
+    "name": "Andre Pallante",
+    "d_velocity": 1.0209062246468221,
+    "d_xrv100": 0.7611572064911556,
+    "d_whiff_rate": 0.0031371928714541697
+   },
+   {
+    "name": "Tommy Henry",
+    "d_velocity": -0.7106162034789918,
+    "d_xrv100": -0.10469973838235047,
+    "d_whiff_rate": -0.014717687985014716
+   },
+   {
+    "name": "JP Sears",
+    "d_velocity": 0.09676390552810687,
+    "d_xrv100": 0.2676413865134031,
+    "d_whiff_rate": 0.0603179607277968
+   }
+  ]
+ },
+ "pitches_per_season": 367
 }
