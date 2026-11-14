@@ -82,7 +82,9 @@ The design and every rule are in **[docs/research_protocol.md](docs/research_pro
 
 It is an observational study. Matching handles what Statcast measures. It cannot see a
 pitcher's health, intent, grip, or a new strength program that changed several things
-at once. "Redesign" means a measured change, so velocity *loss* appears as a change
+at once. Pitchers who choose to redesign may also differ in unmeasured ways, such as
+access to a pitch lab or a healthy offseason; the pre-trend and placebo checks limit
+but cannot rule this out. "Redesign" means a measured change, so velocity *loss* appears as a change
 type even though nobody plans it. Pitchers who abandoned a change in spring, or lost
 their job, are not in the sample. The [protocol](docs/research_protocol.md#11-what-this-design-cannot-do)
 lists these limits in full.
