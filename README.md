@@ -1,5 +1,7 @@
 # ShapeShift
 
+**Live site:** https://baseball-chi-rose.vercel.app
+
 **Which offseason pitch redesigns actually work?**
 
 Every winter, pitchers spend weeks in pitch labs adding velocity, chasing ride, or
