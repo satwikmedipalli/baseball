@@ -314,7 +314,8 @@ export default function Home() {
             <code>{study.data_fingerprint.slice(0, 12)}</code>. Independent work, not affiliated with MLB or any club.
           </p>
           <p>
-            <a href={REPO}>Code, protocol, and full results ↗</a>
+            <a href={REPO}>Code, protocol, and full results ↗</a> · <a href="https://satwikmedipalli.dev">Portfolio ↗</a> · <a href="https://github.com/satwikmedipalli">GitHub ↗</a> ·{" "}
+            <a href="https://linkedin.com/in/medipalli-satwik">LinkedIn ↗</a>
           </p>
         </div>
       </footer>
